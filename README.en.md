@@ -1,3 +1,7 @@
+<div style="text-align: center;">
+    <img width="100%" src="./thumbnail.webp">
+</div>
+
 # disassembler.anm2
 
 [English](README.en.md) | [日本語](README.md)
