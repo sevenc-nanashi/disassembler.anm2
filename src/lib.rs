@@ -6,9 +6,9 @@ mod union_find;
 mod sort;
 
 #[aviutl2::plugin(ScriptModule)]
-struct PartsDestructionMod2 {}
+struct DisassemblerMod2 {}
 
-impl aviutl2::module::ScriptModule for PartsDestructionMod2 {
+impl aviutl2::module::ScriptModule for DisassemblerMod2 {
     fn new(_info: aviutl2::AviUtl2Info) -> aviutl2::AnyResult<Self> {
         aviutl2::tracing_subscriber::fmt()
             .with_max_level(aviutl2::tracing::Level::DEBUG)
@@ -20,7 +20,7 @@ impl aviutl2::module::ScriptModule for PartsDestructionMod2 {
     }
     fn plugin_info(&self) -> aviutl2::module::ScriptModuleTable {
         aviutl2::module::ScriptModuleTable {
-            information: "parts_destruction.mod2 / Internal Module".to_string(),
+            information: "disassembler.mod2 / Internal Module".to_string(),
             functions: Self::functions(),
         }
     }
@@ -44,7 +44,7 @@ static SPLAT_IMAGE_POINTERS: std::sync::LazyLock<dashmap::DashMap<usize, Vec<u8>
     std::sync::LazyLock::new(dashmap::DashMap::new);
 
 #[aviutl2::module::functions]
-impl PartsDestructionMod2 {
+impl DisassemblerMod2 {
     #[allow(clippy::too_many_arguments)]
     fn destruct(
         &self,
@@ -187,4 +187,4 @@ impl PartsDestructionMod2 {
     }
 }
 
-aviutl2::register_script_module!(PartsDestructionMod2);
+aviutl2::register_script_module!(DisassemblerMod2);

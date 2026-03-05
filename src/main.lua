@@ -1,5 +1,5 @@
 --label:配置
---information:https://github.com/parts_destruction.anm2
+--information:https://github.com/disassembler.anm2
 
 --[[pixelshader@quantize_grid:
 ---$include "./quantize_grid.hlsl"
@@ -184,7 +184,7 @@ local function round(num)
     return math.floor(num + 0.5)
 end
 
-local internal = obj.module("parts_destruction")
+local internal = obj.module("disassembler")
 
 local data, width, height = obj.getpixeldata("object")
 local quantize_x_int = math.max(1, round(quantize_x))

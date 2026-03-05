@@ -2,8 +2,8 @@
 # 設定ファイルについては https://github.com/sevenc-nanashi/aviutl2-cli を参照してください。
 
 [project]
-id = "sevenc-nanashi.parts_destruction-anm2"
-name = "parts_destruction.anm2"
+id = "sevenc-nanashi.disassembler-anm2"
+name = "disassembler.anm2"
 version = "0.1.0"
 
 [development]
@@ -12,9 +12,9 @@ aviutl2_version = "latest"
 [preview]
 aviutl2_version = "latest"
 
-[artifacts.English-parts_destruction-anm2]
-destination = "Language/English.parts_destruction.aul2"
-source = "./i18n/English.parts_destruction.aul2"
+[artifacts.English-disassembler-anm2]
+destination = "Language/English.disassembler-anm2.aul2"
+source = "./i18n/English.disassembler-anm2.aul2"
 
 [artifacts.English-aul2]
 enabled = false
@@ -24,21 +24,21 @@ source = "https://raw.githubusercontent.com/aviutl2/aviutl2_community_translatio
 [artifacts.English-aul2.profiles.debug]
 enabled = true
 
-[artifacts.parts_destruction-anm2]
+[artifacts.disassembler-anm2]
 build = "aulua build"
-source = "./target/parts_destruction.anm2"
-destination = "Script/parts_destruction.anm2"
+source = "./target/disassembler.anm2"
+destination = "Script/disassembler.anm2.anm2"
 
-[artifacts.parts_destruction-mod2]
-destination = "Script/parts_destruction.mod2"
+[artifacts.disassembler-mod2]
+destination = "Script/disassembler.mod2"
 
-[artifacts.parts_destruction-mod2.profiles.debug]
+[artifacts.disassembler-mod2.profiles.debug]
 build = "cargo build"
-source = "target/debug/parts_destruction.dll"
+source = "target/debug/disassembler.dll"
 
-[artifacts.parts_destruction-mod2.profiles.release]
+[artifacts.disassembler-mod2.profiles.release]
 build = "cargo build --release"
-source = "target/release/parts_destruction.dll"
+source = "target/release/disassembler.dll"
 
 [artifacts.LyricMotioN]
 enabled = false
@@ -53,17 +53,17 @@ source = "https://raw.githubusercontent.com/korarei/AviUtl2_AutoLyricAnimation_K
 profiles = { debug = { enabled = true } }
 
 [catalog]
-id = "sevenc-nanashi.parts_destruction-anm2"
-name = "parts_destruction.anm2"
-summary = "指定した文字のみに加工を行うスクリプト"
+id = "sevenc-nanashi.disassembler-anm2"
+name = "disassembler.anm2"
+summary = "画像のパーツを分解して個別オブジェクトにするスクリプト"
 type = "common"
-description = { type = "url", url = "https://raw.githubusercontent.com/sevenc-nanashi/parts_destruction.anm2/main/README.md" }
+description = { type = "url", url = "https://raw.githubusercontent.com/sevenc-nanashi/disassembler.anm2/main/README.md" }
 author = "Nanashi."
-download_source = { type = "github", owner = "sevenc-nanashi", repo = "parts_destruction.anm2" }
-homepage = "https://github.com/sevenc-nanashi/parts_destruction.anm2"
+download_source = { type = "github", owner = "sevenc-nanashi", repo = "disassembler.anm2" }
+homepage = "https://github.com/sevenc-nanashi/disassembler.anm2"
 license = { type = "MIT", template = false, text = { type = "file", path = "./LICENSE" } }
 
 [release]
 prebuild = ["cargo about generate ./about.hbs -o ./release/package.txt"]
 package_template = "./release/package.txt"
-package_information = "{name} v{version} / 指定した文字のみに加工を行うスクリプト"
+package_information = "{name} v{version} / 画像のパーツを分解して個別オブジェクトにするスクリプト"

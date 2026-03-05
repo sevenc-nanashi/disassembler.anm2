@@ -1,10 +1,10 @@
 [package]
-name = "parts_destruction"
+name = "disassembler"
 version = "0.1.0"
 edition = "2024"
 
 [lib]
-name = "parts_destruction"
+name = "disassembler"
 crate-type = ["cdylib"]
 
 [dependencies]
