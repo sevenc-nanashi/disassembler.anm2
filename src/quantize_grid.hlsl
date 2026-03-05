@@ -13,10 +13,11 @@ float4 quantize_grid(float4 pos : SV_Position, float2 uv : TEXCOORD)
   }
   uint check_x = (uint)((pos.x - quantize_shift_x) / quantize_x) % 2;
   uint check_y = (uint)((pos.y - quantize_shift_y) / quantize_y) % 2;
-  float grid_color = quantize_x <= 1.0      ? (check_y == 0 ? 0.2 : 0.8)
-                     : quantize_y <= 1.0    ? (check_x == 0 ? 0.2 : 0.8)
+  // 片方が1の場合は帯にする
+  float grid_color = quantize_x <= 1.0      ? (check_y == 0 ? 0.2 : 0.5)
+                     : quantize_y <= 1.0    ? (check_x == 0 ? 0.2 : 0.5)
                      : (check_x == check_y) ? 0.2
-                                            : 0.8;
+                                            : 0.5;
 
   return float4(grid_color, grid_color, grid_color, 0.2);
 }

@@ -286,6 +286,9 @@ for i = 0, num_parts - 1 do
         end
         local circle_color = HSV(hue, 100, 100)
         local color_r, color_g, color_b = RGB(circle_color)
+
+        -- loadでcxとかがリセットされるのが面倒なので、ピクセルシェーダーで描画する。
+        -- それもこれもすべてAviUtl2の仕様が悪い...
         obj.pixelshader("draw_circle", "tempbuffer", { "tempbuffer" }, {
             circle_x,
             circle_y,
