@@ -76,9 +76,8 @@ local quantize_shift_y = 0
 ---$check:分解パーツの可視化
 local visualize_parts = false
 
--- -- 出力中は可視化を無効にする
--- 複数オブジェクトでバグるのでこの挙動を消す
--- visualize_parts = visualize_parts and obj.getoption("gui")
+-- 出力中は可視化を無効にする
+visualize_parts = visualize_parts and obj.getoption("saving")
 
 ---$select:可視化時の色
 ---グラデーション=0
