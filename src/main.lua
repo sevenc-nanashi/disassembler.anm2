@@ -215,6 +215,25 @@ local oobj = {}
 for k, v in pairs(obj) do
     oobj[k] = v
 end
+
+local function reset_object()
+    obj.cx = oobj.cx
+    obj.cy = oobj.cy
+    obj.cz = oobj.cz
+    obj.ox = oobj.ox
+    obj.oy = oobj.oy
+    obj.oz = oobj.oz
+    obj.sx = oobj.sx
+    obj.sy = oobj.sy
+    obj.sz = oobj.sz
+    obj.rx = oobj.rx
+    obj.ry = oobj.ry
+    obj.rz = oobj.rz
+    obj.zoom = oobj.zoom
+    obj.aspect = oobj.aspect
+    obj.alpha = oobj.alpha
+end
+
 debug_dump("original",
     {
         cx = oobj.cx,
@@ -254,6 +273,7 @@ end
 for i = 0, num_parts - 1 do
     local dx, dy, pwidth, pheight, pdata = internal.get_part_image(obj.effect_id)
     debug_dump("part " .. i, { dx = dx, dy = dy, pwidth = pwidth, pheight = pheight })
+    reset_object()
     obj.index = i
     obj.putpixeldata("object", pdata, pwidth, pheight)
     if move_center then
@@ -320,21 +340,7 @@ internal.dispose(obj.effect_id)
 if visualize_parts then
     _ = obj.copybuffer("tempbuffer", cache_name)
     obj.load("tempbuffer")
-    obj.cx = oobj.cx
-    obj.cy = oobj.cy
-    obj.cz = oobj.cz
-    obj.ox = oobj.ox
-    obj.oy = oobj.oy
-    obj.oz = oobj.oz
-    obj.sx = oobj.sx
-    obj.sy = oobj.sy
-    obj.sz = oobj.sz
-    obj.rx = oobj.rx
-    obj.ry = oobj.ry
-    obj.rz = oobj.rz
-    obj.zoom = oobj.zoom
-    obj.aspect = oobj.aspect
-    obj.alpha = oobj.alpha
+    reset_object()
     debug_dump("visualize_parts", oobj)
     obj.draw()
 end
