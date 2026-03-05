@@ -1,0 +1,7 @@
+build:
+  out_dir: target
+
+scripts:
+  - name: parts_destruction.anm2
+    sources:
+      - path: src/main.lua

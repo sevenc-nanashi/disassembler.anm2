@@ -1,0 +1,63 @@
+#:schema ./.aviutl2-cli/aviutl2.schema.json
+# 設定ファイルについては https://github.com/sevenc-nanashi/aviutl2-cli を参照してください。
+
+[project]
+id = "sevenc-nanashi.parts_destruction-anm2"
+name = "parts_destruction.anm2"
+version = "0.1.0"
+
+[development]
+aviutl2_version = "latest"
+
+[preview]
+aviutl2_version = "latest"
+
+[artifacts.English-parts_destruction-anm2]
+destination = "Language/English.parts_destruction.aul2"
+source = "./i18n/English.parts_destruction.aul2"
+
+[artifacts.English-aul2]
+enabled = false
+destination = "Language/English.aul2"
+source = "https://raw.githubusercontent.com/aviutl2/aviutl2_community_translation/refs/heads/main/locales/community_en.aul2"
+
+[artifacts.English-aul2.profiles.debug]
+enabled = true
+
+[artifacts.parts_destruction-anm2]
+build = "aulua build"
+source = "./target/parts_destruction.anm2"
+destination = "Script/parts_destruction.anm2"
+
+[artifacts.parts_destruction-mod2]
+destination = "Script/parts_destruction.mod2"
+
+[artifacts.parts_destruction-mod2.profiles.debug]
+build = "cargo build"
+source = "target/debug/parts_destruction.dll"
+
+[artifacts.parts_destruction-mod2.profiles.release]
+build = "cargo build --release"
+source = "target/release/parts_destruction.dll"
+
+[artifacts.LyricMotioN]
+enabled = false
+destination = "Script/LyricMotioN.anm2"
+source = "https://raw.githubusercontent.com/nea-c/aviutl2_script_LyricMotioN/refs/heads/master/LyricMotioN.anm2"
+profiles = { debug = { enabled = true } }
+
+[catalog]
+id = "sevenc-nanashi.parts_destruction-anm2"
+name = "parts_destruction.anm2"
+summary = "指定した文字のみに加工を行うスクリプト"
+type = "common"
+description = { type = "url", url = "https://raw.githubusercontent.com/sevenc-nanashi/parts_destruction.anm2/main/README.md" }
+author = "Nanashi."
+download_source = { type = "github", owner = "sevenc-nanashi", repo = "parts_destruction.anm2" }
+homepage = "https://github.com/sevenc-nanashi/parts_destruction.anm2"
+license = { type = "MIT", template = false, text = { type = "file", path = "./LICENSE" } }
+
+[release]
+prebuild = ["cargo about generate ./about.hbs -o ./release/package.txt"]
+package_template = "./release/package.txt"
+package_information = "{name} v{version} / 指定した文字のみに加工を行うスクリプト"

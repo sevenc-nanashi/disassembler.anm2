@@ -1,0 +1,15 @@
+[package]
+name = "parts_destruction"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "parts_destruction"
+crate-type = ["cdylib"]
+
+[dependencies]
+aviutl2 = "0.20.2"
+cached = "0.56.0"
+dashmap = "6.1.0"
+lazy-regex = "3.4.1"
+regex = "1.12.3"
