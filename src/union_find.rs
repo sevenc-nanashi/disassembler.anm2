@@ -1,6 +1,6 @@
 pub struct UnionFind {
     parent: Vec<usize>,
-    rank: Vec<usize>,
+    rank: Vec<u8>,
 }
 
 impl UnionFind {
@@ -34,11 +34,12 @@ impl UnionFind {
         }
     }
 
-    pub fn into_components(mut self) -> Vec<Vec<usize>> {
-        let mut groups: std::collections::BTreeMap<usize, Vec<usize>> = std::collections::BTreeMap::new();
-        for i in 0..self.parent.len() {
-            let root = self.find(i);
-            groups.entry(root).or_default().push(i);
+    pub fn into_components_for_nodes(mut self, nodes: &[usize]) -> Vec<Vec<usize>> {
+        let mut groups: std::collections::HashMap<usize, Vec<usize>> =
+            std::collections::HashMap::new();
+        for &node in nodes {
+            let root = self.find(node);
+            groups.entry(root).or_default().push(node);
         }
         groups.into_values().collect()
     }

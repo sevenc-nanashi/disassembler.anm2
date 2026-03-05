@@ -3,6 +3,7 @@ use std::ptr::NonNull;
 use aviutl2::{anyhow, module::ScriptModuleFunctions, tracing};
 
 mod union_find;
+mod sort;
 
 #[aviutl2::plugin(ScriptModule)]
 struct PartsDestructionMod2 {}
@@ -29,12 +30,12 @@ struct SplatEntry {
     parts: Vec<SplatParts>,
 }
 
-struct SplatParts {
-    dx: i64,
-    dy: i64,
-    width: usize,
-    height: usize,
-    image: Vec<u8>,
+pub(crate) struct SplatParts {
+    pub(crate) dx: i64,
+    pub(crate) dy: i64,
+    pub(crate) width: usize,
+    pub(crate) height: usize,
+    pub(crate) image: Vec<u8>,
 }
 
 static SPLAT_DATA: std::sync::LazyLock<dashmap::DashMap<i32, SplatEntry>> =
@@ -44,47 +45,56 @@ static SPLAT_IMAGE_POINTERS: std::sync::LazyLock<dashmap::DashMap<usize, Vec<u8>
 
 #[aviutl2::module::functions]
 impl PartsDestructionMod2 {
+    #[allow(clippy::too_many_arguments)]
     fn destruct(
         &self,
         effect_id: i32,
         width: usize,
         height: usize,
         threshold: u8,
+        sort_mode: i32,
+        reference_point: i32,
+        quantize_x: i32,
+        quantize_y: i32,
+        quantize_shift_x: i32,
+        quantize_shift_y: i32,
         image_data: NonNull<u8>,
     ) -> aviutl2::AnyResult<usize> {
         let start = std::time::Instant::now();
         let image_slice =
             unsafe { std::slice::from_raw_parts(image_data.as_ptr(), width * height * 4) };
 
-        let mut union_find = union_find::UnionFind::new(width * height);
+        let pixel_count = width * height;
+        let mut union_find = union_find::UnionFind::new(pixel_count);
+        let mut active_indices = Vec::with_capacity(pixel_count / 4);
         for y in 0..height {
+            let row_offset = y * width;
             for x in 0..width {
-                let idx = (y * width + x) * 4;
+                let pixel_index = row_offset + x;
+                let idx = pixel_index * 4;
                 let alpha = image_slice[idx + 3];
                 if alpha > threshold {
+                    active_indices.push(pixel_index);
                     if x > 0 {
                         let left_alpha = image_slice[idx - 4 + 3];
                         if left_alpha > threshold {
-                            union_find.union(y * width + x, y * width + (x - 1));
+                            union_find.union(pixel_index, pixel_index - 1);
                         }
                     }
                     if y > 0 {
                         let up_alpha = image_slice[idx - width * 4 + 3];
                         if up_alpha > threshold {
-                            union_find.union(y * width + x, (y - 1) * width + x);
+                            union_find.union(pixel_index, pixel_index - width);
                         }
                     }
                 }
             }
         }
 
-        let components = union_find.into_components();
+        let components = union_find.into_components_for_nodes(&active_indices);
 
-        let mut splat_parts = Vec::new();
+        let mut splat_parts = Vec::with_capacity(components.len());
         for indices in components {
-            if indices.len() == 1 && image_slice[indices[0] * 4 + 3] <= threshold {
-                continue; // Skip single transparent pixels
-            }
             let mut min_x = width;
             let mut max_x = 0;
             let mut min_y = height;
@@ -120,16 +130,26 @@ impl PartsDestructionMod2 {
                 image: part_image,
             });
         }
-        splat_parts.sort_by_key(|part| (part.dx, part.dy));
+        let sort_config = sort::SortConfig {
+            sort_mode,
+            reference_point,
+            quantize_x: i64::from(quantize_x.max(1)),
+            quantize_y: i64::from(quantize_y.max(1)),
+            quantize_shift_x: i64::from(quantize_shift_x),
+            quantize_shift_y: i64::from(quantize_shift_y),
+            image_width: width as i64,
+            image_height: height as i64,
+        };
+        sort::sort_parts(&mut splat_parts, sort_config);
 
         let length = splat_parts.len();
         SPLAT_DATA.insert(effect_id, SplatEntry { parts: splat_parts });
 
         tracing::debug!(
             "Effect ID {}: Destructed {}x{} into {} parts in {:.2?}",
+            effect_id,
             width,
             height,
-            effect_id,
             length,
             start.elapsed()
         );
@@ -139,19 +159,17 @@ impl PartsDestructionMod2 {
     fn get_part_image(
         &self,
         effect_id: i32,
-        part_index: usize,
     ) -> aviutl2::AnyResult<(i64, i64, usize, usize, *const u8)> {
-        let entry = SPLAT_DATA
-            .get(&effect_id)
+        let mut entry = SPLAT_DATA
+            .get_mut(&effect_id)
             .ok_or_else(|| anyhow::anyhow!("Effect ID not found"))?;
         let part = entry
             .parts
-            .get(part_index)
-            .ok_or_else(|| anyhow::anyhow!("Part index out of range"))?;
+            .pop()
+            .ok_or_else(|| anyhow::anyhow!("No more parts available for this effect ID"))?;
 
-        let cloned_image = part.image.clone();
-        let ptr = cloned_image.as_ptr();
-        SPLAT_IMAGE_POINTERS.insert(ptr as usize, cloned_image);
+        let ptr = part.image.as_ptr();
+        SPLAT_IMAGE_POINTERS.insert(ptr as usize, part.image);
 
         Ok((part.dx, part.dy, part.width, part.height, ptr))
     }

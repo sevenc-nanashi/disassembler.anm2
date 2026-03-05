@@ -1,16 +1,92 @@
 --label:配置
 --information:https://github.com/parts_destruction.anm2
 
+--[[pixelshader@quantize_grid:
+---$include "./quantize_grid.hlsl"
+]]
+--[[pixelshader@draw_circle:
+---$include "./draw_circle.hlsl"
+]]
+
 ---$track:透明度閾値
 ---min=0
 ---max=100
----step=0.01
-local threshold = 0
+---step=0.1
+local threshold = 25
 
 threshold = threshold / 100
 
 ---$check:中心位置を変更
 local move_center = true
+
+--group:ソート,false
+
+---$select:ソート方向
+---X-→X+ / Y-→Y+=0
+---X-→X+ / Y+→Y-=1
+---X+→X- / Y-→Y+=2
+---X+→X- / Y+→Y-=3
+---Y-→Y+ / X-→X+=4
+---Y-→Y+ / X+→X-=5
+---Y+→Y- / X-→X+=6
+---Y+→Y- / X+→X-=7
+---Z（左上→右下 / x + w*y）=8
+---Z（右下→左上 / -(x + w*y)）=9
+---逆Z（右上→左下 / -x + w*y）=10
+---逆Z（左下→右上 / x - w*y）=11
+---N（右上→左下 / -x*h + y）=12
+---N（左下→右上 / x*h - y）=13
+---逆N（右下→左上 / -(x*h + y)）=14
+---逆N（左上→右下 / x*h + y）=15
+local sort_mode = 0
+
+---$select:基準座標
+---左上=0
+---上=1
+---右上=2
+---左=3
+---中心=4
+---右=5
+---左下=6
+---下=7
+---右下=8
+local reference_point = 4
+
+---$track:X量子化
+---min=1
+---max=256
+---step=1
+local quantize_x = 1
+
+---$track:Y量子化
+---min=1
+---max=256
+---step=1
+local quantize_y = 1
+
+---$track:X量子化シフト
+---min=-256
+---max=256
+---step=1
+local quantize_shift_x = 0
+
+---$track:Y量子化シフト
+---min=-256
+---max=256
+---step=1
+local quantize_shift_y = 0
+
+---$check:分解パーツの可視化
+local visualize_parts = false
+
+-- 出力中は可視化を無効にする
+visualize_parts = visualize_parts and obj.getoption("gui")
+
+---$select:可視化時の色
+---グラデーション=0
+---ランダム=1
+local visualize_color_mode = 0
+
 
 --group:高度な設定,false
 
@@ -26,6 +102,27 @@ if type(PI.threshold) == "number" then
 end
 if type(PI.debug) == "boolean" then
     debug = PI.debug
+end
+if type(PI.sort_mode) == "number" then
+    sort_mode = PI.sort_mode
+end
+if type(PI.reference_point) == "number" then
+    reference_point = PI.reference_point
+end
+if type(PI.quantize_x) == "number" then
+    quantize_x = PI.quantize_x
+end
+if type(PI.quantize_y) == "number" then
+    quantize_y = PI.quantize_y
+end
+if type(PI.quantize_shift_x) == "number" then
+    quantize_shift_x = PI.quantize_shift_x
+end
+if type(PI.quantize_shift_y) == "number" then
+    quantize_shift_y = PI.quantize_shift_y
+end
+if type(PI.show_quantize_grid) == "boolean" then
+    visualize_parts = PI.show_quantize_grid
 end
 
 -- デバッグ用関数
@@ -90,8 +187,27 @@ end
 local internal = obj.module("parts_destruction")
 
 local data, width, height = obj.getpixeldata("object")
+local quantize_x_int = math.max(1, round(quantize_x))
+local quantize_y_int = math.max(1, round(quantize_y))
+local quantize_shift_x_int = round(quantize_shift_x)
+local quantize_shift_y_int = round(quantize_shift_y)
 
-local num_parts = internal.destruct(obj.effect_id, width, height, round(threshold * 255), data)
+local num_parts = internal.destruct(
+    obj.effect_id,
+    width,
+    height,
+    round(threshold * 255),
+    sort_mode,
+    reference_point,
+    quantize_x_int,
+    quantize_y_int,
+    quantize_shift_x_int,
+    quantize_shift_y_int,
+    data
+)
+if num_parts == 0 then
+    return
+end
 debug_dump("num_parts", num_parts)
 obj.num = num_parts
 local original_cx = obj.cx
@@ -99,10 +215,35 @@ local original_cy = obj.cy
 local original_ox = obj.ox
 local original_oy = obj.oy
 debug_dump("original", { cx = original_cx, cy = original_cy, ox = original_ox, oy = original_oy })
+
+local hues = {}
 for i = 0, num_parts - 1 do
-    local dx, dy, pwidth, pheight, pdata = internal.get_part_image(obj.effect_id, i)
+    hues[i] = i * 360 / num_parts
+end
+
+if visualize_color_mode == 1 then
+    -- シャッフル
+    for i = num_parts - 1, 1, -1 do
+        local j = obj.rand(0, i, i, obj.getvalue("frame_s"))
+        hues[i], hues[j] = hues[j], hues[i]
+    end
+end
+
+if visualize_parts then
+    obj.setoption("drawtarget", "tempbuffer", width, height)
+    obj.pixelshader("quantize_grid", "tempbuffer", {}, {
+        quantize_x,
+        quantize_y,
+        quantize_shift_x,
+        quantize_shift_y,
+    })
+    obj.setoption("drawtarget", "framebuffer")
+end
+for i = 0, num_parts - 1 do
+    local dx, dy, pwidth, pheight, pdata = internal.get_part_image(obj.effect_id)
     debug_dump("part " .. i, { dx = dx, dy = dy, pwidth = pwidth, pheight = pheight })
     obj.index = i
+    obj.putpixeldata("object", pdata, pwidth, pheight)
     if move_center then
         obj.cx = 0
         obj.cy = 0
@@ -111,11 +252,55 @@ for i = 0, num_parts - 1 do
     else
         obj.cx = -pwidth / 2 - dx + original_cx + width / 2
         obj.cy = -pheight / 2 - dy + original_cy + height / 2
+        obj.ox = original_ox
+        obj.oy = original_oy
     end
-    obj.putpixeldata("object", pdata, pwidth, pheight)
     obj.effect()
     obj.draw()
+
+    if visualize_parts then
+        obj.setoption("drawtarget", "tempbuffer")
+        local hue = hues[i]
+        local debug_color = HSV(hue, 50, 100)
+        obj.effect("単色化", "強さ", 50, "色", debug_color, "輝度を保持する", "0")
+        obj.draw(-width / 2 + dx + pwidth / 2, -height / 2 + dy + pheight / 2)
+        local circle_x, circle_y
+        if reference_point == 0 then
+            circle_x, circle_y = dx, dy
+        elseif reference_point == 1 then
+            circle_x, circle_y = dx + pwidth / 2, dy
+        elseif reference_point == 2 then
+            circle_x, circle_y = dx + pwidth, dy
+        elseif reference_point == 3 then
+            circle_x, circle_y = dx, dy + pheight / 2
+        elseif reference_point == 4 then
+            circle_x, circle_y = dx + pwidth / 2, dy + pheight / 2
+        elseif reference_point == 5 then
+            circle_x, circle_y = dx + pwidth, dy + pheight / 2
+        elseif reference_point == 6 then
+            circle_x, circle_y = dx, dy + pheight
+        elseif reference_point == 7 then
+            circle_x, circle_y = dx + pwidth / 2, dy + pheight
+        elseif reference_point == 8 then
+            circle_x, circle_y = dx + pwidth, dy + pheight
+        end
+        local circle_color = HSV(hue, 100, 100)
+        local color_r, color_g, color_b = RGB(circle_color)
+        obj.pixelshader("draw_circle", "tempbuffer", { "tempbuffer" }, {
+            circle_x,
+            circle_y,
+            color_r / 255,
+            color_g / 255,
+            color_b / 255,
+        })
+        obj.setoption("drawtarget", "framebuffer")
+    end
     internal.dispose_part_image(pdata)
 end
 
 internal.dispose(obj.effect_id)
+
+if visualize_parts then
+    obj.load("tempbuffer")
+    obj.draw()
+end

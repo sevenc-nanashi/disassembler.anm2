@@ -46,6 +46,12 @@ destination = "Script/LyricMotioN.anm2"
 source = "https://raw.githubusercontent.com/nea-c/aviutl2_script_LyricMotioN/refs/heads/master/LyricMotioN.anm2"
 profiles = { debug = { enabled = true } }
 
+[artifacts.AutoLyricAnimation_K]
+enabled = false
+destination = "Script/AutoLyricAnimation_K.anm2"
+source = "https://raw.githubusercontent.com/korarei/AviUtl2_AutoLyricAnimation_K_Script/refs/heads/main/script/AutoLyricAnimation_K.anm2"
+profiles = { debug = { enabled = true } }
+
 [catalog]
 id = "sevenc-nanashi.parts_destruction-anm2"
 name = "parts_destruction.anm2"
