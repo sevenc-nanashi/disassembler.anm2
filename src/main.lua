@@ -4,9 +4,6 @@
 --[[pixelshader@quantize_grid:
 ---$include "./quantize_grid.hlsl"
 ]]
---[[pixelshader@draw_circle:
----$include "./draw_circle.hlsl"
-]]
 
 ---$track:透明度閾値
 ---min=0
@@ -318,17 +315,12 @@ for i = 0, num_parts - 1 do
             circle_x, circle_y = dx + pwidth, dy + pheight
         end
         local circle_color = HSV(hue, 100, 100)
-        local color_r, color_g, color_b = RGB(circle_color)
 
-        -- loadでcxとかがリセットされるのが面倒なので、ピクセルシェーダーで描画する。
-        -- それもこれもすべてAviUtl2の仕様が悪い...
-        obj.pixelshader("draw_circle", "tempbuffer", { "tempbuffer" }, {
-            circle_x,
-            circle_y,
-            color_r / 255,
-            color_g / 255,
-            color_b / 255,
-        })
+        _ = obj.load("figure", "円", circle_color, 5, 100)
+        obj.draw(
+            circle_x - width / 2,
+            circle_y - height / 2
+        )
         _ = obj.copybuffer(cache_name, "tempbuffer")
         obj.setoption("drawtarget", "framebuffer")
     end
