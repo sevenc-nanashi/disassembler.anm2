@@ -79,8 +79,9 @@ local quantize_shift_y = 0
 ---$check:分解パーツの可視化
 local visualize_parts = false
 
--- 出力中は可視化を無効にする
-visualize_parts = visualize_parts and obj.getoption("gui")
+-- -- 出力中は可視化を無効にする
+-- 複数オブジェクトでバグるのでこの挙動を消す
+-- visualize_parts = visualize_parts and obj.getoption("gui")
 
 ---$select:可視化時の色
 ---グラデーション=0
@@ -210,11 +211,20 @@ if num_parts == 0 then
 end
 debug_dump("num_parts", num_parts)
 obj.num = num_parts
-local original_cx = obj.cx
-local original_cy = obj.cy
-local original_ox = obj.ox
-local original_oy = obj.oy
-debug_dump("original", { cx = original_cx, cy = original_cy, ox = original_ox, oy = original_oy })
+local oobj = {}
+for k, v in pairs(obj) do
+    oobj[k] = v
+end
+debug_dump("original",
+    {
+        cx = oobj.cx,
+        cy = obj.cy,
+        cz = obj.cz,
+        ox = obj.ox,
+        oy = obj.oy,
+        oz = obj.oz,
+    }
+)
 
 local hues = {}
 for i = 0, num_parts - 1 do
@@ -229,6 +239,7 @@ if visualize_color_mode == 1 then
     end
 end
 
+local cache_name = ("cache:disassembler_%d"):format(obj.effect_id)
 if visualize_parts then
     obj.setoption("drawtarget", "tempbuffer", width, height)
     obj.pixelshader("quantize_grid", "tempbuffer", {}, {
@@ -237,6 +248,7 @@ if visualize_parts then
         quantize_shift_x,
         quantize_shift_y,
     })
+    _ = obj.copybuffer(cache_name, "tempbuffer")
     obj.setoption("drawtarget", "framebuffer")
 end
 for i = 0, num_parts - 1 do
@@ -247,22 +259,23 @@ for i = 0, num_parts - 1 do
     if move_center then
         obj.cx = 0
         obj.cy = 0
-        obj.ox = dx + pwidth / 2 - original_cx - width / 2 + original_ox
-        obj.oy = dy + pheight / 2 - original_cy - height / 2 + original_oy
+        obj.ox = dx + pwidth / 2 - oobj.cx - width / 2 + oobj.ox
+        obj.oy = dy + pheight / 2 - oobj.cy - height / 2 + oobj.oy
     else
-        obj.cx = -pwidth / 2 - dx + original_cx + width / 2
-        obj.cy = -pheight / 2 - dy + original_cy + height / 2
-        obj.ox = original_ox
-        obj.oy = original_oy
+        obj.cx = -pwidth / 2 - dx + oobj.cx + width / 2
+        obj.cy = -pheight / 2 - dy + oobj.cy + height / 2
+        obj.ox = oobj.ox
+        obj.oy = oobj.oy
     end
     obj.effect()
     obj.draw()
 
     if visualize_parts then
         obj.setoption("drawtarget", "tempbuffer")
+        _ = obj.copybuffer("tempbuffer", cache_name)
         local hue = hues[i]
         local debug_color = HSV(hue, 50, 100)
-        obj.effect("単色化", "強さ", 50, "色", debug_color, "輝度を保持する", "0")
+        obj.effect("単色化", "強さ", 100, "色", debug_color, "輝度を保持する", "0")
         obj.draw(-width / 2 + dx + pwidth / 2, -height / 2 + dy + pheight / 2)
         local circle_x, circle_y
         if reference_point == 0 then
@@ -296,6 +309,7 @@ for i = 0, num_parts - 1 do
             color_g / 255,
             color_b / 255,
         })
+        _ = obj.copybuffer(cache_name, "tempbuffer")
         obj.setoption("drawtarget", "framebuffer")
     end
     internal.dispose_part_image(pdata)
@@ -304,6 +318,23 @@ end
 internal.dispose(obj.effect_id)
 
 if visualize_parts then
+    _ = obj.copybuffer("tempbuffer", cache_name)
     obj.load("tempbuffer")
+    obj.cx = oobj.cx
+    obj.cy = oobj.cy
+    obj.cz = oobj.cz
+    obj.ox = oobj.ox
+    obj.oy = oobj.oy
+    obj.oz = oobj.oz
+    obj.sx = oobj.sx
+    obj.sy = oobj.sy
+    obj.sz = oobj.sz
+    obj.rx = oobj.rx
+    obj.ry = oobj.ry
+    obj.rz = oobj.rz
+    obj.zoom = oobj.zoom
+    obj.aspect = oobj.aspect
+    obj.alpha = oobj.alpha
+    debug_dump("visualize_parts", oobj)
     obj.draw()
 end
