@@ -62,7 +62,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.version }}
           body: |
-            `sevenc-nanashi.transform_specific_chars-anm2-v${{ github.event.inputs.version }}.au2pkg.zip`をダウンロードし、AviUtl2のプレビューにドラッグ&ドロップしてください。
+            `sevenc-nanashi.disassembler-anm2-v${{ github.event.inputs.version }}.au2pkg.zip`をダウンロードし、AviUtl2のプレビューにドラッグ&ドロップしてください。
           files: |
-            ./release/sevenc-nanashi.transform_specific_chars-anm2-v*.au2pkg.zip
+            ./release/sevenc-nanashi.disassembler-anm2-v*.au2pkg.zip
             ./release/catalog.json
