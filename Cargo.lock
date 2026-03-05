@@ -146,7 +146,7 @@ dependencies = [
 
 [[package]]
 name = "disassembler"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aviutl2",
  "dashmap",
