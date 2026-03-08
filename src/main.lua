@@ -1,4 +1,5 @@
 --label:配置
+--require:2003600
 --information:https://github.com/disassembler.anm2
 
 --[[pixelshader@quantize_grid:
@@ -77,7 +78,7 @@ local quantize_shift_y = 0
 local visualize_parts = false
 
 -- 出力中は可視化を無効にする
-visualize_parts = visualize_parts and obj.getoption("saving")
+visualize_parts = visualize_parts and not obj.getinfo("saving")
 
 ---$select:可視化時の色
 ---グラデーション=0
@@ -206,7 +207,6 @@ if num_parts == 0 then
     return
 end
 debug_dump("num_parts", num_parts)
-obj.num = num_parts
 local oobj = {}
 for k, v in pairs(obj) do
     oobj[k] = v
@@ -266,26 +266,14 @@ if visualize_parts then
     _ = obj.copybuffer(cache_name, "tempbuffer")
     obj.setoption("drawtarget", "framebuffer")
 end
-for i = 0, num_parts - 1 do
-    local dx, dy, pwidth, pheight, pdata = internal.get_part_image(obj.effect_id)
+local i = -1
+obj.multiobject(num_parts, function()
+    i = i + 1
+    local dx, dy, pwidth, pheight = internal.get_part_image_info(obj.effect_id)
     debug_dump("part " .. i, { dx = dx, dy = dy, pwidth = pwidth, pheight = pheight })
     reset_object()
-    obj.index = i
+    local pdata = internal.pop_part_image_buffer(obj.effect_id)
     obj.putpixeldata("object", pdata, pwidth, pheight)
-    if move_center then
-        obj.cx = 0
-        obj.cy = 0
-        obj.ox = dx + pwidth / 2 - oobj.cx - width / 2 + oobj.ox
-        obj.oy = dy + pheight / 2 - oobj.cy - height / 2 + oobj.oy
-    else
-        obj.cx = -pwidth / 2 - dx + oobj.cx + width / 2
-        obj.cy = -pheight / 2 - dy + oobj.cy + height / 2
-        obj.ox = oobj.ox
-        obj.oy = oobj.oy
-    end
-    obj.effect()
-    obj.draw()
-
     if visualize_parts then
         obj.setoption("drawtarget", "tempbuffer")
         _ = obj.copybuffer("tempbuffer", cache_name)
@@ -322,9 +310,22 @@ for i = 0, num_parts - 1 do
         )
         _ = obj.copybuffer(cache_name, "tempbuffer")
         obj.setoption("drawtarget", "framebuffer")
+
+        obj.putpixeldata("object", pdata, pwidth, pheight)
     end
     internal.dispose_part_image(pdata)
-end
+    if move_center then
+        obj.cx = 0
+        obj.cy = 0
+        obj.ox = dx + pwidth / 2 - oobj.cx - width / 2 + oobj.ox
+        obj.oy = dy + pheight / 2 - oobj.cy - height / 2 + oobj.oy
+    else
+        obj.cx = -pwidth / 2 - dx + oobj.cx + width / 2
+        obj.cy = -pheight / 2 - dy + oobj.cy + height / 2
+        obj.ox = oobj.ox
+        obj.oy = oobj.oy
+    end
+end)
 
 internal.dispose(obj.effect_id)
 
@@ -332,6 +333,5 @@ if visualize_parts then
     _ = obj.copybuffer("tempbuffer", cache_name)
     obj.load("tempbuffer")
     reset_object()
-    debug_dump("visualize_parts", oobj)
     obj.draw()
 end

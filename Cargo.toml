@@ -8,5 +8,5 @@ crate-type = ["cdylib"]
 name = "disassembler"
 
 [dependencies]
-aviutl2 = "0.20.2"
+aviutl2 = "0.21.0"
 dashmap = "6.1.0"

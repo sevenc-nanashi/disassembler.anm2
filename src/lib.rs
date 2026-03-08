@@ -2,8 +2,8 @@ use std::ptr::NonNull;
 
 use aviutl2::{anyhow, module::ScriptModuleFunctions, tracing};
 
-mod union_find;
 mod sort;
+mod union_find;
 
 #[aviutl2::plugin(ScriptModule)]
 struct DisassemblerMod2 {}
@@ -156,10 +156,19 @@ impl DisassemblerMod2 {
         Ok(length)
     }
 
-    fn get_part_image(
-        &self,
-        effect_id: i32,
-    ) -> aviutl2::AnyResult<(i64, i64, usize, usize, *const u8)> {
+    fn get_part_image_info(&self, effect_id: i32) -> aviutl2::AnyResult<(i64, i64, usize, usize)> {
+        let entry = SPLAT_DATA
+            .get(&effect_id)
+            .ok_or_else(|| anyhow::anyhow!("Effect ID not found"))?;
+        let part = entry
+            .parts
+            .last()
+            .ok_or_else(|| anyhow::anyhow!("No parts available for this effect ID"))?;
+
+        Ok((part.dx, part.dy, part.width, part.height))
+    }
+
+    fn pop_part_image_buffer(&self, effect_id: i32) -> aviutl2::AnyResult<*const u8> {
         let mut entry = SPLAT_DATA
             .get_mut(&effect_id)
             .ok_or_else(|| anyhow::anyhow!("Effect ID not found"))?;
@@ -171,7 +180,7 @@ impl DisassemblerMod2 {
         let ptr = part.image.as_ptr();
         SPLAT_IMAGE_POINTERS.insert(ptr as usize, part.image);
 
-        Ok((part.dx, part.dy, part.width, part.height, ptr))
+        Ok(ptr)
     }
 
     fn dispose_part_image(&self, image_ptr: NonNull<u8>) -> aviutl2::AnyResult<()> {

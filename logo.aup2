@@ -554,8 +554,8 @@ video.rate=30
 video.scale=1
 audio.rate=44100
 output.file=Z:\disassembler_thumbnail.webp
-cursor.frame=0
-cursor.layer=8
+cursor.frame=66
+cursor.layer=4
 preview.frame=0
 display.frame=0
 display.layer=0
@@ -715,6 +715,7 @@ effect.name=時間制御(オブジェクト)
 [18]
 layer=5
 scene=2
+focus=1
 frame=60,119
 [18.0]
 effect.name=時間制御(オブジェクト)
@@ -797,7 +798,6 @@ PI=
 [21]
 layer=8
 scene=2
-focus=1
 frame=0,59
 [21.0]
 effect.name=LyricMotioN
