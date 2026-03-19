@@ -35,12 +35,10 @@ pub(crate) struct SplatParts {
     pub(crate) dy: i64,
     pub(crate) width: usize,
     pub(crate) height: usize,
-    pub(crate) image: Vec<u8>,
+    pub(crate) key: (u8, u8, u8),
 }
 
 static SPLAT_DATA: std::sync::LazyLock<dashmap::DashMap<i32, SplatEntry>> =
-    std::sync::LazyLock::new(dashmap::DashMap::new);
-static SPLAT_IMAGE_POINTERS: std::sync::LazyLock<dashmap::DashMap<usize, Vec<u8>>> =
     std::sync::LazyLock::new(dashmap::DashMap::new);
 
 #[aviutl2::module::functions]
@@ -59,10 +57,14 @@ impl DisassemblerMod2 {
         quantize_shift_x: i32,
         quantize_shift_y: i32,
         image_data: NonNull<u8>,
+        return_image_data: NonNull<u8>,
     ) -> aviutl2::AnyResult<usize> {
         let start = std::time::Instant::now();
         let image_slice =
             unsafe { std::slice::from_raw_parts(image_data.as_ptr(), width * height * 4) };
+        let return_image_slice = unsafe {
+            std::slice::from_raw_parts_mut(return_image_data.as_ptr(), width * height * 4)
+        };
 
         let pixel_count = width * height;
         let mut union_find = union_find::UnionFind::new(pixel_count);
@@ -92,9 +94,27 @@ impl DisassemblerMod2 {
         }
 
         let components = union_find.into_components_for_nodes(&active_indices);
+        if components.is_empty() {
+            tracing::debug!(
+                "Effect ID {}: No active pixels found in the image.",
+                effect_id
+            );
+            SPLAT_DATA.insert(effect_id, SplatEntry { parts: Vec::new() });
+            return Ok(0);
+        }
+        const SPLIT_CHANNEL_INTO: usize = 64;
+        const SHIFT_PER_CHANNEL: usize = 256 / SPLIT_CHANNEL_INTO;
+        const MAX_PARTS: usize = SPLIT_CHANNEL_INTO * SPLIT_CHANNEL_INTO * SPLIT_CHANNEL_INTO;
+        if components.len() > MAX_PARTS {
+            return Err(anyhow::anyhow!(
+                "Too many parts generated: {} (max {})",
+                components.len(),
+                MAX_PARTS
+            ));
+        }
 
         let mut splat_parts = Vec::with_capacity(components.len());
-        for indices in components {
+        for (i, indices) in components.into_iter().enumerate() {
             let mut min_x = width;
             let mut max_x = 0;
             let mut min_y = height;
@@ -111,15 +131,17 @@ impl DisassemblerMod2 {
 
             let part_width = max_x - min_x + 1;
             let part_height = max_y - min_y + 1;
-            let mut part_image = vec![0u8; part_width * part_height * 4];
 
+            let key = (
+                (i % SPLIT_CHANNEL_INTO) as u8 * SHIFT_PER_CHANNEL as u8,
+                ((i / SPLIT_CHANNEL_INTO) % SPLIT_CHANNEL_INTO) as u8 * SHIFT_PER_CHANNEL as u8,
+                (i / (SPLIT_CHANNEL_INTO * SPLIT_CHANNEL_INTO)) as u8 * SHIFT_PER_CHANNEL as u8,
+            );
             for idx in indices {
-                let x = idx % width;
-                let y = idx / width;
-                let part_idx = ((y - min_y) * part_width + (x - min_x)) * 4;
-                let original_idx = idx * 4;
-                part_image[part_idx..part_idx + 4]
-                    .copy_from_slice(&image_slice[original_idx..original_idx + 4]);
+                return_image_slice[idx * 4] = key.0;
+                return_image_slice[idx * 4 + 1] = key.1;
+                return_image_slice[idx * 4 + 2] = key.2;
+                return_image_slice[idx * 4 + 3] = 255;
             }
 
             splat_parts.push(SplatParts {
@@ -127,7 +149,7 @@ impl DisassemblerMod2 {
                 dy: min_y as i64,
                 width: part_width,
                 height: part_height,
-                image: part_image,
+                key,
             });
         }
         let sort_config = sort::SortConfig {
@@ -156,38 +178,27 @@ impl DisassemblerMod2 {
         Ok(length)
     }
 
-    fn get_part_image_info(&self, effect_id: i32) -> aviutl2::AnyResult<(i64, i64, usize, usize)> {
-        let entry = SPLAT_DATA
-            .get(&effect_id)
-            .ok_or_else(|| anyhow::anyhow!("Effect ID not found"))?;
-        let part = entry
-            .parts
-            .last()
-            .ok_or_else(|| anyhow::anyhow!("No parts available for this effect ID"))?;
-
-        Ok((part.dx, part.dy, part.width, part.height))
-    }
-
-    fn pop_part_image_buffer(&self, effect_id: i32) -> aviutl2::AnyResult<*const u8> {
+    fn get_part_image_info(
+        &self,
+        effect_id: i32,
+    ) -> aviutl2::AnyResult<(i64, i64, usize, usize, u8, u8, u8)> {
         let mut entry = SPLAT_DATA
             .get_mut(&effect_id)
             .ok_or_else(|| anyhow::anyhow!("Effect ID not found"))?;
         let part = entry
             .parts
             .pop()
-            .ok_or_else(|| anyhow::anyhow!("No more parts available for this effect ID"))?;
+            .ok_or_else(|| anyhow::anyhow!("No parts available for this effect ID"))?;
 
-        let ptr = part.image.as_ptr();
-        SPLAT_IMAGE_POINTERS.insert(ptr as usize, part.image);
-
-        Ok(ptr)
-    }
-
-    fn dispose_part_image(&self, image_ptr: NonNull<u8>) -> aviutl2::AnyResult<()> {
-        SPLAT_IMAGE_POINTERS
-            .remove(&(image_ptr.as_ptr() as usize))
-            .ok_or_else(|| anyhow::anyhow!("Image pointer not found"))?;
-        Ok(())
+        Ok((
+            part.dx,
+            part.dy,
+            part.width,
+            part.height,
+            part.key.0,
+            part.key.1,
+            part.key.2,
+        ))
     }
 
     fn dispose(&self, effect_id: i32) -> aviutl2::AnyResult<()> {

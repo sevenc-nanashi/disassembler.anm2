@@ -1,5 +1,5 @@
 [project]
-version=2003500
+version=2003601
 file=E:\aviutl2\disassembler.anm2\logo.aup2
 display.scene=2
 preview.scene=0
@@ -554,8 +554,8 @@ video.rate=30
 video.scale=1
 audio.rate=44100
 output.file=Z:\disassembler_thumbnail.webp
-cursor.frame=66
-cursor.layer=4
+cursor.frame=49
+cursor.layer=17
 preview.frame=0
 display.frame=0
 display.layer=0
@@ -705,6 +705,7 @@ Z軸回転=0.00
 [17]
 layer=5
 scene=2
+focus=1
 frame=0,59
 [17.0]
 effect.name=時間制御(オブジェクト)
@@ -715,7 +716,6 @@ effect.name=時間制御(オブジェクト)
 [18]
 layer=5
 scene=2
-focus=1
 frame=60,119
 [18.0]
 effect.name=時間制御(オブジェクト)

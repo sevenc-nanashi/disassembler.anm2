@@ -5,6 +5,9 @@
 --[[pixelshader@quantize_grid:
 ---$include "./quantize_grid.hlsl"
 ]]
+--[[pixelshader@mask_atlas:
+---$include "./mask_atlas.hlsl"
+]]
 
 ---$track:透明度閾値
 ---min=0
@@ -184,7 +187,11 @@ end
 
 local internal = obj.module("disassembler")
 
-local data, width, height = obj.getpixeldata("object")
+obj.copybuffer("cache:source", "object")
+local data, source_width, source_height = obj.getpixeldata("object")
+local atlas_cache_name = ("cache:disassembler_atlas_%d"):format(obj.effect_id)
+obj.clearbuffer(atlas_cache_name, source_width, source_height)
+local return_data, _, _ = obj.getpixeldata(atlas_cache_name)
 local quantize_x_int = math.max(1, round(quantize_x))
 local quantize_y_int = math.max(1, round(quantize_y))
 local quantize_shift_x_int = round(quantize_shift_x)
@@ -192,8 +199,8 @@ local quantize_shift_y_int = round(quantize_shift_y)
 
 local num_parts = internal.destruct(
     obj.effect_id,
-    width,
-    height,
+    source_width,
+    source_height,
     round(threshold * 255),
     sort_mode,
     reference_point,
@@ -201,11 +208,13 @@ local num_parts = internal.destruct(
     quantize_y_int,
     quantize_shift_x_int,
     quantize_shift_y_int,
-    data
+    data,
+    return_data
 )
 if num_parts == 0 then
     return
 end
+obj.putpixeldata(atlas_cache_name, return_data, source_width, source_height)
 debug_dump("num_parts", num_parts)
 local oobj = {}
 for k, v in pairs(obj) do
@@ -256,7 +265,7 @@ end
 
 local cache_name = ("cache:disassembler_%d"):format(obj.effect_id)
 if visualize_parts then
-    obj.setoption("drawtarget", "tempbuffer", width, height)
+    obj.setoption("drawtarget", "tempbuffer", source_width, source_height)
     obj.pixelshader("quantize_grid", "tempbuffer", {}, {
         quantize_x,
         quantize_y,
@@ -269,18 +278,27 @@ end
 local i = -1
 obj.multiobject(num_parts, function()
     i = i + 1
-    local dx, dy, pwidth, pheight = internal.get_part_image_info(obj.effect_id)
+    local dx, dy, pwidth, pheight, key_red, key_green, key_blue = internal.get_part_image_info(obj.effect_id)
     debug_dump("part " .. i, { dx = dx, dy = dy, pwidth = pwidth, pheight = pheight })
     reset_object()
-    local pdata = internal.pop_part_image_buffer(obj.effect_id)
-    obj.putpixeldata("object", pdata, pwidth, pheight)
+    obj.clearbuffer("cache:part_image", pwidth, pheight)
+    obj.pixelshader("mask_atlas", "cache:part_image", { "cache:source", atlas_cache_name }, {
+        source_width,
+        source_height,
+        key_red / 255,
+        key_green / 255,
+        key_blue / 255,
+        dx,
+        dy
+    }, "copy", "dot")
     if visualize_parts then
+        obj.copybuffer("object", "cache:part_image")
         obj.setoption("drawtarget", "tempbuffer")
         _ = obj.copybuffer("tempbuffer", cache_name)
         local hue = hues[i]
         local debug_color = HSV(hue, 50, 100)
         obj.effect("単色化", "強さ", 100, "色", debug_color, "輝度を保持する", "0")
-        obj.draw(-width / 2 + dx + pwidth / 2, -height / 2 + dy + pheight / 2)
+        obj.draw(-source_width / 2 + dx + pwidth / 2, -source_height / 2 + dy + pheight / 2)
         local circle_x, circle_y
         if reference_point == 0 then
             circle_x, circle_y = dx, dy
@@ -305,23 +323,21 @@ obj.multiobject(num_parts, function()
 
         _ = obj.load("figure", "円", circle_color, 5, 100)
         obj.draw(
-            circle_x - width / 2,
-            circle_y - height / 2
+            circle_x - source_width / 2,
+            circle_y - source_height / 2
         )
         _ = obj.copybuffer(cache_name, "tempbuffer")
         obj.setoption("drawtarget", "framebuffer")
-
-        obj.putpixeldata("object", pdata, pwidth, pheight)
     end
-    internal.dispose_part_image(pdata)
+    obj.copybuffer("object", "cache:part_image")
     if move_center then
         obj.cx = 0
         obj.cy = 0
-        obj.ox = dx + pwidth / 2 - oobj.cx - width / 2 + oobj.ox
-        obj.oy = dy + pheight / 2 - oobj.cy - height / 2 + oobj.oy
+        obj.ox = dx + pwidth / 2 - oobj.cx - source_width / 2 + oobj.ox
+        obj.oy = dy + pheight / 2 - oobj.cy - source_height / 2 + oobj.oy
     else
-        obj.cx = -pwidth / 2 - dx + oobj.cx + width / 2
-        obj.cy = -pheight / 2 - dy + oobj.cy + height / 2
+        obj.cx = -pwidth / 2 - dx + oobj.cx + source_width / 2
+        obj.cy = -pheight / 2 - dy + oobj.cy + source_height / 2
         obj.ox = oobj.ox
         obj.oy = oobj.oy
     end
@@ -331,6 +347,7 @@ internal.dispose(obj.effect_id)
 
 if visualize_parts then
     _ = obj.copybuffer("tempbuffer", cache_name)
+    -- _ = obj.copybuffer("tempbuffer", atlas_cache_name)
     obj.load("tempbuffer")
     reset_object()
     obj.draw()
