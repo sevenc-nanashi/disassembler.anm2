@@ -187,7 +187,7 @@ end
 
 local internal = obj.module("disassembler")
 
-obj.copybuffer("cache:source", "object")
+obj.copybuffer("cache:disassembler_source", "object")
 local data, source_width, source_height = obj.getpixeldata("object")
 local atlas_cache_name = ("cache:disassembler_atlas_%d"):format(obj.effect_id)
 obj.clearbuffer(atlas_cache_name, source_width, source_height)
@@ -281,8 +281,8 @@ obj.multiobject(num_parts, function()
     local dx, dy, pwidth, pheight, key_red, key_green, key_blue = internal.get_part_image_info(obj.effect_id)
     debug_dump("part " .. i, { dx = dx, dy = dy, pwidth = pwidth, pheight = pheight })
     reset_object()
-    obj.clearbuffer("cache:part_image", pwidth, pheight)
-    obj.pixelshader("mask_atlas", "cache:part_image", { "cache:source", atlas_cache_name }, {
+    obj.clearbuffer("cache:disassembler_part_image", pwidth, pheight)
+    obj.pixelshader("mask_atlas", "cache:disassembler_part_image", { "cache:disassembler_source", atlas_cache_name }, {
         source_width,
         source_height,
         key_red / 255,
@@ -292,7 +292,7 @@ obj.multiobject(num_parts, function()
         dy
     }, "copy", "dot")
     if visualize_parts then
-        obj.copybuffer("object", "cache:part_image")
+        obj.copybuffer("object", "cache:disassembler_part_image")
         obj.setoption("drawtarget", "tempbuffer")
         _ = obj.copybuffer("tempbuffer", cache_name)
         local hue = hues[i]
@@ -329,7 +329,7 @@ obj.multiobject(num_parts, function()
         _ = obj.copybuffer(cache_name, "tempbuffer")
         obj.setoption("drawtarget", "framebuffer")
     end
-    obj.copybuffer("object", "cache:part_image")
+    obj.copybuffer("object", "cache:disassembler_part_image")
     if move_center then
         obj.cx = 0
         obj.cy = 0
